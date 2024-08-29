@@ -2,18 +2,18 @@ package org.example
 
 import java.io.File
 
-const val PERCENTAGE_BASE1 = 100
+const val PERCENTAGE = 100
 
 fun main() {
     val wordsFile = File("words.txt")
 
-    val dictionary = mutableListOf<Word1>()
+    val dictionary = mutableListOf<DataWord>()
 
     for (line in wordsFile.readLines()) {
         val parts = line.split("|")
         if (parts.size == 3) {
             val correctAnswersCount = parts[2].toIntOrNull() ?: 0
-            val word = Word1(
+            val word = DataWord(
                 original = parts[0],
                 translate = parts[1],
                 correctAnswersCount = correctAnswersCount,
@@ -32,8 +32,8 @@ fun main() {
         val userInput = readln()
 
         when (userInput) {
-            "1" -> learningWords1(dictionary, wordsFile)
-            "2" -> showStatistics1(dictionary)
+            "1" -> learningWord(dictionary, wordsFile)
+            "2" -> statisticsShow(dictionary)
             "0" -> return
 
             else -> println("Неверный ввод. Введите 1, 2 или 0")
@@ -41,7 +41,7 @@ fun main() {
     }
 }
 
-fun learningWords1(dictionary: MutableList<Word1>, wordsFile: File) {
+fun learningWord(dictionary: MutableList<DataWord>, wordsFile: File) {
     while (true) {
         val unlearnedWords = dictionary.filter { it.correctAnswersCount < 3 }
 
@@ -73,22 +73,22 @@ fun learningWords1(dictionary: MutableList<Word1>, wordsFile: File) {
     }
 }
 
-fun saveDictionary(dictionary: MutableList<Word1>, wordsFile: File) {
+fun saveDictionary(dictionary: MutableList<DataWord>, wordsFile: File) {
     val updatedLines = dictionary.joinToString("\n") {
         "${it.original}|${it.translate}|${it.correctAnswersCount}"
     }
     wordsFile.writeText(updatedLines)
 }
 
-fun showStatistics1(dictionary: List<Word1>) {
+fun statisticsShow(dictionary: List<DataWord>) {
     val totalWords = dictionary.size
     val learnedWords = dictionary.filter { it.correctAnswersCount >= 3 }.size
-    val percentage = if (totalWords > 0) (learnedWords * PERCENTAGE_BASE1) / totalWords else 0
+    val percentage = if (totalWords > 0) (learnedWords * PERCENTAGE) / totalWords else 0
 
     println("Выучено $learnedWords из $totalWords слов | $percentage%")
 }
 
-data class Word1(
+data class DataWord(
     val original: String,
     val translate: String,
     var correctAnswersCount: Int = 0,
