@@ -4,7 +4,13 @@ import java.io.File
 
 fun main() {
     val wordsFile = File("words.txt")
-    val trainer = LearnWordsTrainer(wordsFile)
+
+    val trainer = try {
+        LearnWordsTrainer(wordsFile, 3, 3)
+    } catch (e: Exception) {
+        println("Невозможно загрузить словарь")
+        return
+    }
 
     while (true) {
         println("Меню:\n1 – Учить слова\n2 – Статистика\n0 – Выход")
