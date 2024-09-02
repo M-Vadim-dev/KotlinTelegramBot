@@ -57,12 +57,10 @@ class LearnWordsTrainer(
 
         val requiredCount = countOfIncorrectQuestionWords - availableWords.size
         val variants = if (availableWords.size < countOfIncorrectQuestionWords) {
-            (availableWords + learnedWords.shuffled().take(maxOf(requiredCount, 0))).shuffled() + currentWord
-        } else {
-            availableWords.shuffled().take(countOfIncorrectQuestionWords) + currentWord
-        }.shuffled()
+            (availableWords + learnedWords.shuffled().take(maxOf(requiredCount, 0))).shuffled()
+        } else availableWords.shuffled().take(countOfIncorrectQuestionWords)
 
-        return Question(variants = variants, correctAnswer = currentWord)
+        return Question(variants = (variants + currentWord).shuffled(), correctAnswer = currentWord)
     }
 
     fun learnWords() {
