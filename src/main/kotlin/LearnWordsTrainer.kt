@@ -21,7 +21,11 @@ data class Question(
 
 const val PERCENTAGE_BASE = 100
 
-class LearnWordsTrainer(private val wordsFile: File) {
+class LearnWordsTrainer(
+    private val wordsFile: File,
+    private val learnedAnswerCount: Int = 3,
+    private val countOfIncorrectQuestionWords: Int = 3,
+) {
     private val dictionary: MutableList<Word> = loadDictionary(wordsFile)
 
     private fun loadDictionary(file: File): MutableList<Word> {
@@ -47,22 +51,29 @@ class LearnWordsTrainer(private val wordsFile: File) {
         return Statistics(totalWords, learnedWords, percentage)
     }
 
-    private fun getQuestion(unlearnedWords: List<Word>): Question {
+    private fun getQuestion(unlearnedWords: List<Word>, learnedWords: List<Word>): Question {
         val currentWord = unlearnedWords.random()
-        val variants = (unlearnedWords.filter { it != currentWord }.shuffled().take(3) + currentWord).shuffled()
-        return Question(variants = variants, correctAnswer = currentWord)
+        val availableWords = unlearnedWords.filter { it != currentWord }
+
+        val requiredCount = countOfIncorrectQuestionWords - availableWords.size
+        val variants = if (availableWords.size < countOfIncorrectQuestionWords) {
+            (availableWords + learnedWords.shuffled().take(maxOf(requiredCount, 0))).shuffled()
+        } else availableWords.shuffled().take(countOfIncorrectQuestionWords)
+
+        return Question(variants = (variants + currentWord).shuffled(), correctAnswer = currentWord)
     }
 
     fun learnWords() {
         while (true) {
-            val unlearnedWords = dictionary.filter { it.correctAnswersCount < 3 }
+            val unlearnedWords = dictionary.filter { it.correctAnswersCount < learnedAnswerCount }
+            val learnedWords = dictionary.filter { it.correctAnswersCount >= learnedAnswerCount }
 
             if (unlearnedWords.isEmpty()) {
                 println("Вы выучили все слова.")
                 return
             }
 
-            val question = getQuestion(unlearnedWords)
+            val question = getQuestion(unlearnedWords, learnedWords)
             presentQuestion(question)
             val userInput = readln()
 
