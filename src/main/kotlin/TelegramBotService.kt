@@ -1,9 +1,13 @@
 import java.net.URI
+import java.net.URLEncoder
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
+import java.nio.charset.StandardCharsets
 
 const val TELEGRAM_API_URL = "https://api.telegram.org"
+const val LEARN_WORDS_CLICKED = "learn_words_clicked"
+const val STATISTICS_CLICKED = "statistics_clicked"
 
 class TelegramBotService(private val botToken: String) {
 
@@ -15,10 +19,44 @@ class TelegramBotService(private val botToken: String) {
         return response.body()
     }
 
-    fun sendMessage(chatId: String, text: String): String {
-        val urlSendMessage = "$TELEGRAM_API_URL/bot$botToken/sendMessage?chat_id=$chatId&text=$text"
+    fun sendMessage(chatId: String, message: String): String {
+        val encoded = URLEncoder.encode(message, StandardCharsets.UTF_8)
+        val urlSendMessage = "$TELEGRAM_API_URL/bot$botToken/sendMessage?chat_id=$chatId&text=$encoded"
         val client: HttpClient = HttpClient.newBuilder().build()
         val request: HttpRequest = HttpRequest.newBuilder().uri(URI.create(urlSendMessage)).build()
+        val response: HttpResponse<String> = client.send(request, HttpResponse.BodyHandlers.ofString())
+        return response.body()
+    }
+
+    fun sendMenu(chatId: String): String {
+        val urlSendMenu = "$TELEGRAM_API_URL/bot$botToken/sendMessage"
+        val sendMenuBody = """
+        {
+        	"chat_id": $chatId,
+        	"text": "Основное меню",
+        	"reply_markup": {
+        	 "inline_keyboard": [
+        		[
+        			{
+        				"text": "Изучить слова",
+        				"callback_data": "$LEARN_WORDS_CLICKED"
+        			},
+        			{
+        				"text": "Статистика",
+        				"callback_data": "$STATISTICS_CLICKED"
+        			}
+        		]
+        	 ]
+        	}
+        }
+        """.trimIndent()
+
+        val client: HttpClient = HttpClient.newBuilder().build()
+        val request: HttpRequest = HttpRequest.newBuilder().uri(URI.create(urlSendMenu))
+            .header("Content-type", "application/json")
+            .POST(HttpRequest.BodyPublishers.ofString(sendMenuBody))
+            .build()
+
         val response: HttpResponse<String> = client.send(request, HttpResponse.BodyHandlers.ofString())
         return response.body()
     }
