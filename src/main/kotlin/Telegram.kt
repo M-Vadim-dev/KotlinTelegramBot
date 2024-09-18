@@ -1,7 +1,6 @@
 import org.example.LearnWordsTrainer
 import java.io.File
 
-
 fun main(args: Array<String>) {
     val botToken = args[0]
     val telegramBotService = TelegramBotService(botToken)
@@ -37,11 +36,11 @@ fun main(args: Array<String>) {
 
         if (chatId != null && data?.lowercase() == STATISTICS_CLICKED) {
             val statistics = trainer.getStatistics()
-            telegramBotService.sendMessage(
-                chatId,
+            val statisticsMessage =
                 "Выучено ${statistics.learnedWords} из ${statistics.totalWords} слов | ${statistics.percentage}%"
-            )
+            telegramBotService.sendMessage(chatId, statisticsMessage)
         }
 
     }
+
 }
