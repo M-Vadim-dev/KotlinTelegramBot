@@ -23,10 +23,10 @@ const val PERCENTAGE_BASE = 100
 
 class LearnWordsTrainer(
     private val wordsFile: File,
-    private val learnedAnswerCount: Int = 3,
+    val learnedAnswerCount: Int = 3,
     private val countOfIncorrectQuestionWords: Int = 3,
 ) {
-    private val dictionary: MutableList<Word> = loadDictionary(wordsFile)
+    val dictionary: MutableList<Word> = loadDictionary(wordsFile)
 
     private fun loadDictionary(file: File): MutableList<Word> {
         return file.readLines().mapNotNull { line ->
@@ -51,7 +51,7 @@ class LearnWordsTrainer(
         return Statistics(totalWords, learnedWords, percentage)
     }
 
-    private fun getQuestion(unlearnedWords: List<Word>, learnedWords: List<Word>): Question {
+    fun getQuestion(unlearnedWords: List<Word>, learnedWords: List<Word>): Question {
         val currentWord = unlearnedWords.random()
         val availableWords = unlearnedWords.filter { it != currentWord }
 

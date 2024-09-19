@@ -31,7 +31,7 @@ fun main(args: Array<String>) {
         }
 
         if (chatId != null && data?.lowercase() == LEARN_WORDS_CLICKED) {
-            telegramBotService.sendMessage(chatId, "Начнём!")
+            checkNextQuestionAndSend(trainer, telegramBotService, chatId)
         }
 
         if (chatId != null && data?.lowercase() == STATISTICS_CLICKED) {
@@ -42,5 +42,15 @@ fun main(args: Array<String>) {
         }
 
     }
+}
+
+fun checkNextQuestionAndSend(trainer: LearnWordsTrainer, telegramBotService: TelegramBotService, chatId: String) {
+    val unlearnedWords = trainer.dictionary.filter { it.correctAnswersCount < trainer.learnedAnswerCount }
+    val learnedWords = trainer.dictionary.filter { it.correctAnswersCount >= trainer.learnedAnswerCount }
+
+    if (unlearnedWords.isNotEmpty()) {
+        val question = trainer.getQuestion(unlearnedWords, learnedWords)
+        telegramBotService.sendQuestion(chatId, question)
+    } else telegramBotService.sendMessage(chatId, "Вы выучили все слова в базе.")
 
 }

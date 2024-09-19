@@ -1,3 +1,4 @@
+import org.example.Question
 import java.net.URI
 import java.net.URLEncoder
 import java.net.http.HttpClient
@@ -8,6 +9,7 @@ import java.nio.charset.StandardCharsets
 const val TELEGRAM_API_URL = "https://api.telegram.org"
 const val LEARN_WORDS_CLICKED = "learn_words_clicked"
 const val STATISTICS_CLICKED = "statistics_clicked"
+const val CALLBACK_DATA_ANSWER_PREFIX = "answer_"
 
 class TelegramBotService(private val botToken: String) {
 
@@ -55,6 +57,39 @@ class TelegramBotService(private val botToken: String) {
         val request: HttpRequest = HttpRequest.newBuilder().uri(URI.create(urlSendMenu))
             .header("Content-type", "application/json")
             .POST(HttpRequest.BodyPublishers.ofString(sendMenuBody))
+            .build()
+
+        val response: HttpResponse<String> = client.send(request, HttpResponse.BodyHandlers.ofString())
+        return response.body()
+    }
+
+    fun sendQuestion(chatId: String, question: Question): String {
+        val optionsJson = question.variants.mapIndexed { index, word ->
+            """
+            {
+                "text": "${word.original}",
+                "callback_data": "$CALLBACK_DATA_ANSWER_PREFIX$index"
+            }
+            """
+        }.joinToString(",")
+
+        val sendQuestionBody = """
+        {
+            "chat_id": "$chatId",
+            "text": "Translate: ${question.correctAnswer.translate}",
+            "reply_markup": {
+                "inline_keyboard": [
+                    [$optionsJson]
+                ]
+            }
+        }
+        """.trimIndent()
+
+        val client: HttpClient = HttpClient.newBuilder().build()
+        val request: HttpRequest = HttpRequest.newBuilder()
+            .uri(URI.create("$TELEGRAM_API_URL/bot$botToken/sendMessage"))
+            .header("Content-type", "application/json")
+            .POST(HttpRequest.BodyPublishers.ofString(sendQuestionBody))
             .build()
 
         val response: HttpResponse<String> = client.send(request, HttpResponse.BodyHandlers.ofString())
