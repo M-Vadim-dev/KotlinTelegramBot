@@ -41,6 +41,14 @@ fun main(args: Array<String>) {
             telegramBotService.sendMessage(chatId, statisticsMessage)
         }
 
+        if (chatId != null && data?.startsWith(CALLBACK_DATA_ANSWER_PREFIX) == true) { // Проверяем начало переменной data методом startsWith на наличие
+            val answerIndex = data.substringAfter(CALLBACK_DATA_ANSWER_PREFIX).toInt() // Извлекаем из поля data индекс варианта ответа
+            val question = "" // затуп получился))
+            if (trainer.checkAnswer(answerIndex, question)) {
+                telegramBotService.sendMessage(chatId, "Правильно!")
+            } else telegramBotService.sendMessage(chatId, "Неправильно.")
+            checkNextQuestionAndSend(trainer, telegramBotService, chatId)
+        }
     }
 }
 

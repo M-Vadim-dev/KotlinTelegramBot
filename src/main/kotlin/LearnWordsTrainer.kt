@@ -75,9 +75,9 @@ class LearnWordsTrainer(
 
             val question = getQuestion(unlearnedWords, learnedWords)
             presentQuestion(question)
-            val userInput = readln()
+            val userInput = readln().toInt()
 
-            if (userInput == "0") return
+            if (userInput == 0) return
             checkAnswer(userInput, question)
         }
     }
@@ -89,15 +89,21 @@ class LearnWordsTrainer(
         }
     }
 
-    private fun checkAnswer(userInput: String, question: Question) {
-        val answerIndex = userInput.toIntOrNull()?.minus(1)
-        if (answerIndex != null && answerIndex in question.variants.indices) {
+    fun checkAnswer(userInput: Int, question: Question): Boolean {
+        val answerIndex = userInput.minus(1)
+        return if (answerIndex in question.variants.indices) {
             if (question.variants[answerIndex].translate == question.correctAnswer.translate) {
                 println("Правильно!")
                 question.correctAnswer.correctAnswersCount++
                 saveDictionary()
-            } else println("Неправильно! Правильный ответ: ${question.correctAnswer.translate}.")
-        } else println("Неверный ввод. Введите номер ответа или 0 для возврата в меню.")
+                true
+            } else {
+                println("Неправильно! Правильный ответ: ${question.correctAnswer.translate}.")
+                false
+            }
+        } else {
+            println("Неверный ввод. Введите номер ответа или 0 для возврата в меню.")
+            false
+        }
     }
-
 }
