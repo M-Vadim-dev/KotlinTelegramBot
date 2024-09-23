@@ -41,24 +41,29 @@ fun main(args: Array<String>) {
             telegramBotService.sendMessage(chatId, statisticsMessage)
         }
 
-        if (chatId != null && data?.startsWith(CALLBACK_DATA_ANSWER_PREFIX) == true) { // Проверяем начало переменной data методом startsWith на наличие
-            val answerIndex = data.substringAfter(CALLBACK_DATA_ANSWER_PREFIX).toInt() // Извлекаем из поля data индекс варианта ответа
-//            val question =
-//            if (trainer.checkAnswer(answerIndex, question)) {
-//                telegramBotService.sendMessage(chatId, "Правильно!")
-//            } else telegramBotService.sendMessage(chatId, "Неправильно.")
-//            checkNextQuestionAndSend(trainer, telegramBotService, chatId)
+        if (chatId != null && data?.startsWith(CALLBACK_DATA_ANSWER_PREFIX) == true) {
+            val answerIndex = data.substringAfter(CALLBACK_DATA_ANSWER_PREFIX).toInt()
+
+            if (trainer.currentQuestion != null) {
+                if (trainer.checkAnswer(answerIndex + 1)) {
+                    telegramBotService.sendMessage(chatId, "Правильно!")
+                } else {
+                    val correctAnswer = trainer.currentQuestion?.correctAnswer?.translate
+                    telegramBotService.sendMessage(chatId, "Неправильно. Правильный ответ: $correctAnswer")
+                }
+            } else telegramBotService.sendMessage(chatId, "Не найден текущий вопрос.")
+            checkNextQuestionAndSend(trainer, telegramBotService, chatId)
         }
     }
 }
 
 fun checkNextQuestionAndSend(trainer: LearnWordsTrainer, telegramBotService: TelegramBotService, chatId: String) {
     val unlearnedWords = trainer.dictionary.filter { it.correctAnswersCount < trainer.learnedAnswerCount }
-    val learnedWords = trainer.dictionary.filter { it.correctAnswersCount >= trainer.learnedAnswerCount }
 
     if (unlearnedWords.isNotEmpty()) {
-        val question = trainer.getQuestion(unlearnedWords, learnedWords)
-        telegramBotService.sendQuestion(chatId, question)
+        trainer.getQuestion(unlearnedWords, trainer.dictionary)
+        val question = trainer.currentQuestion
+        question?.let { telegramBotService.sendQuestion(chatId, it) }
     } else telegramBotService.sendMessage(chatId, "Вы выучили все слова в базе.")
 
 }
