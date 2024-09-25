@@ -27,6 +27,7 @@ class LearnWordsTrainer(
     private val countOfIncorrectQuestionWords: Int = 3,
 ) {
     val dictionary: MutableList<Word> = loadDictionary(wordsFile)
+    var currentQuestion: Question? = null
 
     private fun loadDictionary(file: File): MutableList<Word> {
         return file.readLines().mapNotNull { line ->
@@ -51,7 +52,7 @@ class LearnWordsTrainer(
         return Statistics(totalWords, learnedWords, percentage)
     }
 
-    fun getQuestion(unlearnedWords: List<Word>, learnedWords: List<Word>): Question {
+    fun getQuestion(unlearnedWords: List<Word>, learnedWords: List<Word>) {
         val currentWord = unlearnedWords.random()
         val availableWords = unlearnedWords.filter { it != currentWord }
 
@@ -60,25 +61,28 @@ class LearnWordsTrainer(
             (availableWords + learnedWords.shuffled().take(maxOf(requiredCount, 0))).shuffled()
         } else availableWords.shuffled().take(countOfIncorrectQuestionWords)
 
-        return Question(variants = (variants + currentWord).shuffled(), correctAnswer = currentWord)
+        currentQuestion = Question(variants = (variants + currentWord).shuffled(), correctAnswer = currentWord)
     }
 
     fun learnWords() {
         while (true) {
             val unlearnedWords = dictionary.filter { it.correctAnswersCount < learnedAnswerCount }
-            val learnedWords = dictionary.filter { it.correctAnswersCount >= learnedAnswerCount }
-
             if (unlearnedWords.isEmpty()) {
                 println("Вы выучили все слова.")
                 return
             }
 
-            val question = getQuestion(unlearnedWords, learnedWords)
-            presentQuestion(question)
-            val userInput = readln()
+            getQuestion(unlearnedWords, dictionary)
+            currentQuestion?.let { presentQuestion(it) }
 
-            if (userInput == "0") return
-            checkAnswer(userInput, question)
+            val userInput = readln().toIntOrNull()
+            if (userInput == 0) return
+
+            if (userInput != null) {
+                checkAnswer(userInput)
+            } else {
+                println("Неверный ввод. Пожалуйста, введите номер ответа.")
+            }
         }
     }
 
@@ -89,15 +93,23 @@ class LearnWordsTrainer(
         }
     }
 
-    private fun checkAnswer(userInput: String, question: Question) {
-        val answerIndex = userInput.toIntOrNull()?.minus(1)
-        if (answerIndex != null && answerIndex in question.variants.indices) {
+    fun checkAnswer(userInput: Int): Boolean {
+        val question = currentQuestion ?: return false
+        val answerIndex = userInput - 1
+
+        return if (answerIndex in question.variants.indices) {
             if (question.variants[answerIndex].translate == question.correctAnswer.translate) {
                 println("Правильно!")
                 question.correctAnswer.correctAnswersCount++
                 saveDictionary()
-            } else println("Неправильно! Правильный ответ: ${question.correctAnswer.translate}.")
-        } else println("Неверный ввод. Введите номер ответа или 0 для возврата в меню.")
+                true
+            } else {
+                println("Неправильно! Правильный ответ: ${question.correctAnswer.translate}.")
+                false
+            }
+        } else {
+            println("Неверный ввод. Введите номер ответа или 0 для возврата в меню.")
+            false
+        }
     }
-
 }
