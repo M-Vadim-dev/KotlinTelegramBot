@@ -11,24 +11,25 @@ const val LEARN_WORDS_CLICKED = "learn_words_clicked"
 const val STATISTICS_CLICKED = "statistics_clicked"
 const val CALLBACK_DATA_ANSWER_PREFIX = "answer_"
 
-class TelegramBotService(private val botToken: String) {
+class TelegramBotService(private val botToken: String, private val json: Json) {
+
+    private val client: HttpClient = HttpClient.newBuilder().build()
 
     fun getUpdates(updateId: Long): String {
         val urlGetUpdates = "$TELEGRAM_API_URL/bot$botToken/getUpdates?offset=$updateId"
-        val client: HttpClient = HttpClient.newBuilder().build()
         val request: HttpRequest = HttpRequest.newBuilder().uri(URI.create(urlGetUpdates)).build()
         val response: HttpResponse<String> = client.send(request, HttpResponse.BodyHandlers.ofString())
         return response.body()
     }
 
-    fun sendMessage(json: Json, chatId: Long, message: String): String {
+    fun sendMessage(chatId: Long, message: String): String {
         val urlSenMessage = "$TELEGRAM_API_URL/bot$botToken/sendMessage"
         val requestBody = SendMessageRequest(
             chatId = chatId,
             text = message,
         )
         val requestBodyString = json.encodeToString(requestBody)
-        val client: HttpClient = HttpClient.newBuilder().build()
+
         val request: HttpRequest = HttpRequest.newBuilder().uri(URI.create(urlSenMessage))
             .header("Content-type", "application/json")
             .POST(HttpRequest.BodyPublishers.ofString(requestBodyString))
@@ -38,7 +39,7 @@ class TelegramBotService(private val botToken: String) {
         return response.body()
     }
 
-    fun sendMenu(json: Json, chatId: Long): String {
+    fun sendMenu(chatId: Long): String {
         val urlSendMenu = "$TELEGRAM_API_URL/bot$botToken/sendMessage"
         val requestBody = SendMessageRequest(
             chatId = chatId,
@@ -54,7 +55,6 @@ class TelegramBotService(private val botToken: String) {
         )
         val requestBodyString = json.encodeToString(requestBody)
 
-        val client: HttpClient = HttpClient.newBuilder().build()
         val request: HttpRequest = HttpRequest.newBuilder().uri(URI.create(urlSendMenu))
             .header("Content-type", "application/json")
             .POST(HttpRequest.BodyPublishers.ofString(requestBodyString))
@@ -64,7 +64,7 @@ class TelegramBotService(private val botToken: String) {
         return response.body()
     }
 
-    fun sendQuestion(json: Json, chatId: Long, question: Question): String {
+    fun sendQuestion(chatId: Long, question: Question): String {
         val urlSendQuestion = "$TELEGRAM_API_URL/bot$botToken/sendMessage"
         val requestBody = SendMessageRequest(
             chatId = chatId,
@@ -80,7 +80,6 @@ class TelegramBotService(private val botToken: String) {
         )
         val requestBodyString = json.encodeToString(requestBody)
 
-        val client: HttpClient = HttpClient.newBuilder().build()
         val request: HttpRequest = HttpRequest.newBuilder()
             .uri(URI.create(urlSendQuestion))
             .header("Content-type", "application/json")
@@ -90,4 +89,5 @@ class TelegramBotService(private val botToken: String) {
         val response: HttpResponse<String> = client.send(request, HttpResponse.BodyHandlers.ofString())
         return response.body()
     }
+
 }

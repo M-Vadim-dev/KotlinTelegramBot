@@ -68,17 +68,12 @@ data class InlineKeyboard(
 
 fun main(args: Array<String>) {
     val botToken = args[0]
-    val telegramBotService = TelegramBotService(botToken)
+    var lastUpdateId = 0L
+    val json = Json { ignoreUnknownKeys = true }
+    val telegramBotService = TelegramBotService(botToken, json)
 
     val wordsFile = File("words.txt")
-    val trainer = LearnWordsTrainer(wordsFile, 3, 3)
-
-    var lastUpdateId = 0L
-
-    val json = Json {
-        ignoreUnknownKeys = true
-    }
-
+    val trainer = LearnWordsTrainer(wordsFile, 3, 3, telegramBotService)
 
     while (true) {
         Thread.sleep(2000)
@@ -95,18 +90,18 @@ fun main(args: Array<String>) {
         val data = firstUpdate.callbackQuery?.data
 
         if (chatId != null && message?.lowercase() == "/start") {
-            telegramBotService.sendMenu(json, chatId)
+            telegramBotService.sendMenu(chatId)
         }
 
         if (chatId != null && data?.lowercase() == LEARN_WORDS_CLICKED) {
-            checkNextQuestionAndSend(json, trainer, telegramBotService, chatId)
+            trainer.checkNextQuestionAndSend(chatId)
         }
 
         if (chatId != null && data?.lowercase() == STATISTICS_CLICKED) {
             val statistics = trainer.getStatistics()
             val statisticsMessage =
                 "Выучено ${statistics.learnedWords} из ${statistics.totalWords} слов | ${statistics.percentage}%"
-            telegramBotService.sendMessage(json, chatId, statisticsMessage)
+            telegramBotService.sendMessage(chatId, statisticsMessage)
         }
 
         if (chatId != null && data?.startsWith(CALLBACK_DATA_ANSWER_PREFIX) == true) {
@@ -114,29 +109,13 @@ fun main(args: Array<String>) {
 
             if (trainer.currentQuestion != null) {
                 if (trainer.checkAnswer(answerIndex + 1)) {
-                    telegramBotService.sendMessage(json, chatId, "Правильно!")
+                    telegramBotService.sendMessage(chatId, "Правильно!")
                 } else {
                     val correctAnswer = trainer.currentQuestion?.correctAnswer?.translate
-                    telegramBotService.sendMessage(json, chatId, "Неправильно. Правильный ответ: $correctAnswer")
+                    telegramBotService.sendMessage(chatId, "Неправильно. Правильный ответ: $correctAnswer")
                 }
-            } else telegramBotService.sendMessage(json, chatId, "Не найден текущий вопрос.")
-            checkNextQuestionAndSend(json, trainer, telegramBotService, chatId)
+            } else telegramBotService.sendMessage(chatId, "Не найден текущий вопрос.")
+            trainer.checkNextQuestionAndSend(chatId)
         }
     }
-}
-
-fun checkNextQuestionAndSend(
-    json: Json,
-    trainer: LearnWordsTrainer,
-    telegramBotService: TelegramBotService,
-    chatId: Long,
-) {
-    val unlearnedWords = trainer.dictionary.filter { it.correctAnswersCount < trainer.learnedAnswerCount }
-
-    if (unlearnedWords.isNotEmpty()) {
-        trainer.getQuestion(unlearnedWords, trainer.dictionary)
-        val question = trainer.currentQuestion
-        question?.let { telegramBotService.sendQuestion(json, chatId, it) }
-    } else telegramBotService.sendMessage(json, chatId, "Вы выучили все слова в базе.")
-
 }
