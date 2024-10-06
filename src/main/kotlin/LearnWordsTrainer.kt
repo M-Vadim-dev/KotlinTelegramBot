@@ -1,7 +1,10 @@
 package org.example
 
+import TelegramBotService
+import kotlinx.serialization.Serializable
 import java.io.File
 
+@Serializable
 data class Word(
     val original: String,
     val translate: String,
@@ -23,10 +26,11 @@ const val PERCENTAGE_BASE = 100
 
 class LearnWordsTrainer(
     private val wordsFile: File,
-    val learnedAnswerCount: Int = 3,
+    private val learnedAnswerCount: Int = 3,
     private val countOfIncorrectQuestionWords: Int = 3,
+    private val telegramBotService: TelegramBotService? = null,
 ) {
-    val dictionary: MutableList<Word> = loadDictionary(wordsFile)
+    private val dictionary: MutableList<Word> = loadDictionary(wordsFile)
     var currentQuestion: Question? = null
 
     private fun loadDictionary(file: File): MutableList<Word> {
@@ -52,7 +56,7 @@ class LearnWordsTrainer(
         return Statistics(totalWords, learnedWords, percentage)
     }
 
-    fun getQuestion(unlearnedWords: List<Word>, learnedWords: List<Word>) {
+    private fun getQuestion(unlearnedWords: List<Word>, learnedWords: List<Word>) {
         val currentWord = unlearnedWords.random()
         val availableWords = unlearnedWords.filter { it != currentWord }
 
@@ -111,5 +115,16 @@ class LearnWordsTrainer(
             println("Неверный ввод. Введите номер ответа или 0 для возврата в меню.")
             false
         }
+    }
+
+    fun checkNextQuestionAndSend(chatId: Long) {
+        val unlearnedWords = dictionary.filter { it.correctAnswersCount < learnedAnswerCount }
+
+        if (unlearnedWords.isNotEmpty()) {
+            getQuestion(unlearnedWords, dictionary)
+            val question = currentQuestion
+            question?.let { telegramBotService?.sendQuestion(chatId, it) }
+        } else telegramBotService?.sendMessage(chatId, "Вы выучили все слова в базе.")
+
     }
 }

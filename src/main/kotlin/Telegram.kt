@@ -1,37 +1,100 @@
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
 import org.example.LearnWordsTrainer
 import java.io.File
 
+@Serializable
+data class Update(
+    @SerialName("update_id")
+    val updateId: Long,
+    @SerialName("message")
+    val message: Message? = null,
+    @SerialName("callback_query")
+    val callbackQuery: CallbackQuery? = null,
+)
+
+@Serializable
+data class Response(
+    @SerialName("result")
+    val result: List<Update>,
+)
+
+@Serializable
+data class Message(
+    @SerialName("text")
+    val text: String,
+    @SerialName("chat")
+    val chat: Chat,
+)
+
+@Serializable
+data class CallbackQuery(
+    @SerialName("data")
+    val data: String? = null,
+    @SerialName("message")
+    val message: Message? = null,
+)
+
+@Serializable
+data class Chat(
+    @SerialName("id")
+    val id: Long,
+)
+
+@Serializable
+data class SendMessageRequest(
+    @SerialName("chat_id")
+    val chatId: Long?,
+    @SerialName("text")
+    val text: String,
+    @SerialName("reply_markup")
+    val replyMarkup: ReplyMarkup? = null,
+)
+
+@Serializable
+data class ReplyMarkup(
+    @SerialName("inline_keyboard")
+    val inlineKeyboard: List<List<InlineKeyboard>>,
+)
+
+@Serializable
+data class InlineKeyboard(
+    @SerialName("callback_data")
+    val callbackData: String,
+    @SerialName("text")
+    val text: String,
+)
+
 fun main(args: Array<String>) {
     val botToken = args[0]
-    val telegramBotService = TelegramBotService(botToken)
+    var lastUpdateId = 0L
+    val json = Json { ignoreUnknownKeys = true }
+    val telegramBotService = TelegramBotService(botToken, json)
 
     val wordsFile = File("words.txt")
-    val trainer = LearnWordsTrainer(wordsFile, 3, 3)
-
-    var updateId = 0
-
-    val updateIdRegex = "\"update_id\":\\s*(\\d+)".toRegex()
-    val chatIdRegex = "\"chat\":\\s*\\{[^}]*\"id\":\\s*(\\d+)".toRegex()
-    val messageRegex = "\"text\":\\s*\"(.*?)\"".toRegex()
-    val dataRegex = "\"data\":\\s*\"(.*?)\"".toRegex()
+    val trainer = LearnWordsTrainer(wordsFile, 3, 3, telegramBotService)
 
     while (true) {
         Thread.sleep(2000)
-        val updates: String = telegramBotService.getUpdates(updateId)
-        println(updates)
+        val responseString: String = telegramBotService.getUpdates(lastUpdateId)
+        println(responseString)
+        val response: Response = json.decodeFromString(responseString)
+        val updates = response.result
+        val firstUpdate = updates.firstOrNull() ?: continue
+        val updateId = firstUpdate.updateId
+        lastUpdateId = updateId + 1
 
-        updateId = updateIdRegex.find(updates)?.groups?.get(1)?.value?.toInt()?.plus(1) ?: continue
-
-        val chatId = chatIdRegex.find(updates)?.groups?.get(1)?.value
-        val message = messageRegex.find(updates)?.groups?.get(1)?.value
-        val data = dataRegex.find(updates)?.groups?.get(1)?.value
+        val message = firstUpdate.message?.text
+        val chatId = firstUpdate.message?.chat?.id ?: firstUpdate.callbackQuery?.message?.chat?.id
+        val data = firstUpdate.callbackQuery?.data
 
         if (chatId != null && message?.lowercase() == "/start") {
             telegramBotService.sendMenu(chatId)
         }
 
         if (chatId != null && data?.lowercase() == LEARN_WORDS_CLICKED) {
-            checkNextQuestionAndSend(trainer, telegramBotService, chatId)
+            trainer.checkNextQuestionAndSend(chatId)
         }
 
         if (chatId != null && data?.lowercase() == STATISTICS_CLICKED) {
@@ -52,18 +115,7 @@ fun main(args: Array<String>) {
                     telegramBotService.sendMessage(chatId, "Неправильно. Правильный ответ: $correctAnswer")
                 }
             } else telegramBotService.sendMessage(chatId, "Не найден текущий вопрос.")
-            checkNextQuestionAndSend(trainer, telegramBotService, chatId)
+            trainer.checkNextQuestionAndSend(chatId)
         }
     }
-}
-
-fun checkNextQuestionAndSend(trainer: LearnWordsTrainer, telegramBotService: TelegramBotService, chatId: String) {
-    val unlearnedWords = trainer.dictionary.filter { it.correctAnswersCount < trainer.learnedAnswerCount }
-
-    if (unlearnedWords.isNotEmpty()) {
-        trainer.getQuestion(unlearnedWords, trainer.dictionary)
-        val question = trainer.currentQuestion
-        question?.let { telegramBotService.sendQuestion(chatId, it) }
-    } else telegramBotService.sendMessage(chatId, "Вы выучили все слова в базе.")
-
 }
