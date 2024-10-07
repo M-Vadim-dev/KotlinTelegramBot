@@ -127,4 +127,9 @@ class LearnWordsTrainer(
         } else telegramBotService?.sendMessage(chatId, "Вы выучили все слова в базе.")
 
     }
+
+    fun resetProgress() {
+        dictionary.forEach { it.correctAnswersCount = 0 }
+        saveDictionary()
+    }
 }
