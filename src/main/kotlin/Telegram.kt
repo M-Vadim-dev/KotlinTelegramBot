@@ -94,14 +94,6 @@ fun handleUpdate(update: Update, telegramBotService: TelegramBotService, trainer
     val data = update.callbackQuery?.data
 
     val trainerFile = File("${chatId}.txt")
-    if (!trainerFile.exists()) {
-        val wordsFile = File("words.txt")
-        if (wordsFile.exists()) wordsFile.copyTo(trainerFile)
-        else {
-            telegramBotService.sendMessage(chatId, "Словарь слов не найден.")
-            return
-        }
-    }
     val trainer = trainers.getOrPut(chatId) { LearnWordsTrainer(trainerFile, 3, 3, telegramBotService) }
 
     if (message?.lowercase() == "/start") {
