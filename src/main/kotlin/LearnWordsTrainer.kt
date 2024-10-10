@@ -22,6 +22,7 @@ data class Question(
     val correctAnswer: Word,
 )
 
+const val DEFAULT_WORDS_FILE = "words.txt"
 const val PERCENTAGE_BASE = 100
 
 class LearnWordsTrainer(
@@ -34,6 +35,11 @@ class LearnWordsTrainer(
     var currentQuestion: Question? = null
 
     private fun loadDictionary(file: File): MutableList<Word> {
+        if (!file.exists()) {
+            val wordsFile = File(DEFAULT_WORDS_FILE)
+            if (wordsFile.exists()) wordsFile.copyTo(file)
+            else return mutableListOf()
+        }
         return file.readLines().mapNotNull { line ->
             val parts = line.split("|")
             if (parts.size == 3) {
@@ -126,5 +132,10 @@ class LearnWordsTrainer(
             question?.let { telegramBotService?.sendQuestion(chatId, it) }
         } else telegramBotService?.sendMessage(chatId, "Вы выучили все слова в базе.")
 
+    }
+
+    fun resetProgress() {
+        dictionary.forEach { it.correctAnswersCount = 0 }
+        saveDictionary()
     }
 }
