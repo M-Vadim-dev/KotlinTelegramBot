@@ -1,6 +1,7 @@
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import org.example.Question
+import java.io.IOException
 import java.net.URI
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
@@ -19,8 +20,13 @@ class TelegramBotService(private val botToken: String, private val json: Json) {
     fun getUpdates(updateId: Long): String {
         val urlGetUpdates = "$TELEGRAM_API_URL/bot$botToken/getUpdates?offset=$updateId"
         val request: HttpRequest = HttpRequest.newBuilder().uri(URI.create(urlGetUpdates)).build()
-        val response: HttpResponse<String> = client.send(request, HttpResponse.BodyHandlers.ofString())
-        return response.body()
+        return try {
+            val response: HttpResponse<String> = client.send(request, HttpResponse.BodyHandlers.ofString())
+            response.body()
+        } catch (e: IOException) {
+            println("Ошибка при получении обновлений: ${e.message}")
+            "Ошибка при получении обновлений. Пожалуйста, повторите запрос."
+        }
     }
 
     fun sendMessage(chatId: Long, message: String): String {
@@ -36,8 +42,13 @@ class TelegramBotService(private val botToken: String, private val json: Json) {
             .POST(HttpRequest.BodyPublishers.ofString(requestBodyString))
             .build()
 
-        val response: HttpResponse<String> = client.send(request, HttpResponse.BodyHandlers.ofString())
-        return response.body()
+        return try {
+            val response: HttpResponse<String> = client.send(request, HttpResponse.BodyHandlers.ofString())
+            response.body()
+        } catch (e: IOException) {
+            println("Ошибка при отправке сообщения: ${e.message}")
+            "Ошибка при отправке сообщения. Пожалуйста, повторите запрос."
+        }
     }
 
     fun sendMenu(chatId: Long): String {
@@ -64,8 +75,13 @@ class TelegramBotService(private val botToken: String, private val json: Json) {
             .POST(HttpRequest.BodyPublishers.ofString(requestBodyString))
             .build()
 
-        val response: HttpResponse<String> = client.send(request, HttpResponse.BodyHandlers.ofString())
-        return response.body()
+        return try {
+            val response: HttpResponse<String> = client.send(request, HttpResponse.BodyHandlers.ofString())
+            response.body()
+        } catch (e: IOException) {
+            println("Ошибка при отправке меню: ${e.message}")
+            "Ошибка при отправке меню. Пожалуйста, повторите запрос."
+        }
     }
 
     fun sendQuestion(chatId: Long, question: Question): String {
@@ -90,8 +106,13 @@ class TelegramBotService(private val botToken: String, private val json: Json) {
             .POST(HttpRequest.BodyPublishers.ofString(requestBodyString))
             .build()
 
-        val response: HttpResponse<String> = client.send(request, HttpResponse.BodyHandlers.ofString())
-        return response.body()
+        return try {
+            val response: HttpResponse<String> = client.send(request, HttpResponse.BodyHandlers.ofString())
+            response.body()
+        } catch (e: IOException) {
+            println("Ошибка при отправке вопроса: ${e.message}")
+            "Ошибка при отправке вопроса. Пожалуйста, повторите запрос."
+        }
     }
 
 }
