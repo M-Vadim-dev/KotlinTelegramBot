@@ -12,6 +12,8 @@ const val LEARN_WORDS_CLICKED = "learn_words_clicked"
 const val STATISTICS_CLICKED = "statistics_clicked"
 const val RESET_CLICKED = "reset_clicked"
 const val CALLBACK_DATA_ANSWER_PREFIX = "answer_"
+const val MAIN_MENU = "main_menu"
+const val LEARN_WORDS_MENU = "learn_words_menu"
 
 class TelegramBotService(private val botToken: String, private val json: Json) {
 
@@ -20,13 +22,8 @@ class TelegramBotService(private val botToken: String, private val json: Json) {
     fun getUpdates(updateId: Long): String {
         val urlGetUpdates = "$TELEGRAM_API_URL/bot$botToken/getUpdates?offset=$updateId"
         val request: HttpRequest = HttpRequest.newBuilder().uri(URI.create(urlGetUpdates)).build()
-        return try {
-            val response: HttpResponse<String> = client.send(request, HttpResponse.BodyHandlers.ofString())
-            response.body()
-        } catch (e: IOException) {
-            println("Ошибка при получении обновлений: ${e.message}")
-            "Ошибка при получении обновлений. Пожалуйста, повторите запрос."
-        }
+        val response: HttpResponse<String> = client.send(request, HttpResponse.BodyHandlers.ofString())
+        return response.body()
     }
 
     fun sendMessage(chatId: Long, message: String): String {
@@ -41,13 +38,12 @@ class TelegramBotService(private val botToken: String, private val json: Json) {
             .header("Content-type", "application/json")
             .POST(HttpRequest.BodyPublishers.ofString(requestBodyString))
             .build()
-
         return try {
             val response: HttpResponse<String> = client.send(request, HttpResponse.BodyHandlers.ofString())
             response.body()
         } catch (e: IOException) {
             println("Ошибка при отправке сообщения: ${e.message}")
-            "Ошибка при отправке сообщения. Пожалуйста, повторите запрос."
+            ""
         }
     }
 
@@ -55,15 +51,19 @@ class TelegramBotService(private val botToken: String, private val json: Json) {
         val urlSendMenu = "$TELEGRAM_API_URL/bot$botToken/sendMessage"
         val requestBody = SendMessageRequest(
             chatId = chatId,
-            text = "Основное меню",
+            text = """Режим изучения слов.
+                |
+                |Выбирайте подходящее значение из списка.
+                |Если вы несколько раз правильно выберите слово,то автоматически слово пометится как изученное и не будет больше показываться.
+            """.trimMargin(),
             replyMarkup = ReplyMarkup(
                 listOf(
                     listOf(
-                        InlineKeyboard(text = "Изучать слова", callbackData = LEARN_WORDS_CLICKED),
-                        InlineKeyboard(text = "Статистика", callbackData = STATISTICS_CLICKED),
+                        InlineKeyboard(text = "✍ Перейти к изучению", callbackData = LEARN_WORDS_CLICKED),
                     ),
                     listOf(
-                        InlineKeyboard(text = "Сбросить прогресс", callbackData = RESET_CLICKED),
+                        InlineKeyboard(text = "ℹ Статистика", callbackData = STATISTICS_CLICKED),
+                        InlineKeyboard(text = "⬅ В главное меню", callbackData = MAIN_MENU),
                     )
                 )
             )
@@ -74,13 +74,42 @@ class TelegramBotService(private val botToken: String, private val json: Json) {
             .header("Content-type", "application/json")
             .POST(HttpRequest.BodyPublishers.ofString(requestBodyString))
             .build()
-
         return try {
             val response: HttpResponse<String> = client.send(request, HttpResponse.BodyHandlers.ofString())
             response.body()
         } catch (e: IOException) {
             println("Ошибка при отправке меню: ${e.message}")
-            "Ошибка при отправке меню. Пожалуйста, повторите запрос."
+            ""
+        }
+    }
+
+    fun sendMainMenu(chatId: Long): String {
+        val urlSendMenu = "$TELEGRAM_API_URL/bot$botToken/sendMessage"
+        val requestBody = SendMessageRequest(
+            chatId = chatId,
+            text = """Привет!
+                |Легкий английский ждет тебя!
+                |Бот поможет тебе в обучении английского языка.
+            """.trimMargin(),
+            replyMarkup = ReplyMarkup(
+                listOf(
+                    listOf(InlineKeyboard(text = "\uD83D\uDCD6 Изучать слова", callbackData = LEARN_WORDS_MENU)),
+                    listOf(InlineKeyboard(text = "🔄️ Сбросить прогресс", callbackData = RESET_CLICKED)),
+                )
+            )
+        )
+        val requestBodyString = json.encodeToString(requestBody)
+
+        val request: HttpRequest = HttpRequest.newBuilder().uri(URI.create(urlSendMenu))
+            .header("Content-type", "application/json")
+            .POST(HttpRequest.BodyPublishers.ofString(requestBodyString))
+            .build()
+        return try {
+            val response: HttpResponse<String> = client.send(request, HttpResponse.BodyHandlers.ofString())
+            response.body()
+        } catch (e: IOException) {
+            println("Ошибка при отправке меню: ${e.message}")
+            ""
         }
     }
 
@@ -88,16 +117,17 @@ class TelegramBotService(private val botToken: String, private val json: Json) {
         val urlSendQuestion = "$TELEGRAM_API_URL/bot$botToken/sendMessage"
         val requestBody = SendMessageRequest(
             chatId = chatId,
-            text = question.correctAnswer.original,
+            text = "Выбери правильный перевод: ${question.correctAnswer.original}",
             replyMarkup = ReplyMarkup(
-                listOf(question.variants.mapIndexed { index, word ->
-                    InlineKeyboard(
-                        text = word.translate,
-                        callbackData = "$CALLBACK_DATA_ANSWER_PREFIX$index"
-                    )
-                })
+                listOf(
+                    question.variants.mapIndexed { index, word ->
+                        InlineKeyboard(text = word.translate, callbackData = "$CALLBACK_DATA_ANSWER_PREFIX$index")
+                    },
+                    listOf(InlineKeyboard(text = "⬅ Назад", callbackData = LEARN_WORDS_MENU)),
+                )
             )
         )
+
         val requestBodyString = json.encodeToString(requestBody)
 
         val request: HttpRequest = HttpRequest.newBuilder()
@@ -105,14 +135,12 @@ class TelegramBotService(private val botToken: String, private val json: Json) {
             .header("Content-type", "application/json")
             .POST(HttpRequest.BodyPublishers.ofString(requestBodyString))
             .build()
-
         return try {
             val response: HttpResponse<String> = client.send(request, HttpResponse.BodyHandlers.ofString())
             response.body()
         } catch (e: IOException) {
             println("Ошибка при отправке вопроса: ${e.message}")
-            "Ошибка при отправке вопроса. Пожалуйста, повторите запрос."
+            ""
         }
     }
-
 }

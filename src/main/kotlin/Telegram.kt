@@ -71,7 +71,6 @@ fun main(args: Array<String>) {
     var lastUpdateId = 0L
     val json = Json { ignoreUnknownKeys = true }
     val telegramBotService = TelegramBotService(botToken, json)
-
     val trainers = HashMap<Long, LearnWordsTrainer>()
 
     while (true) {
@@ -84,7 +83,6 @@ fun main(args: Array<String>) {
         val sortedUpdates = response.result.sortedBy { it.updateId }
         sortedUpdates.forEach { handleUpdate(it, telegramBotService, trainers) }
         lastUpdateId = sortedUpdates.last().updateId + 1
-
     }
 }
 
@@ -96,13 +94,11 @@ fun handleUpdate(update: Update, telegramBotService: TelegramBotService, trainer
     val trainerFile = File("${chatId}.txt")
     val trainer = trainers.getOrPut(chatId) { LearnWordsTrainer(trainerFile, 3, 3, telegramBotService) }
 
-    if (message?.lowercase() == "/start") {
-        telegramBotService.sendMenu(chatId)
-    }
+    if (message?.lowercase() == "/start") telegramBotService.sendMainMenu(chatId)
 
-    if (data?.lowercase() == LEARN_WORDS_CLICKED) {
-        trainer.checkNextQuestionAndSend(chatId)
-    }
+    if (data?.lowercase() == LEARN_WORDS_MENU) telegramBotService.sendMenu(chatId)
+
+    if (data?.lowercase() == LEARN_WORDS_CLICKED) trainer.checkNextQuestionAndSend(chatId)
 
     if (data?.lowercase() == STATISTICS_CLICKED) {
         val statistics = trainer.getStatistics()
@@ -116,12 +112,12 @@ fun handleUpdate(update: Update, telegramBotService: TelegramBotService, trainer
 
         if (trainer.currentQuestion != null) {
             if (trainer.checkAnswer(answerIndex + 1)) {
-                telegramBotService.sendMessage(chatId, "Правильно!")
+                telegramBotService.sendMessage(chatId, if (Math.random() < 0.5) "\u2705 Правильно!" else "✅ Верно!")
             } else {
                 val correctAnswer = trainer.currentQuestion?.correctAnswer?.translate
-                telegramBotService.sendMessage(chatId, "Неправильно. Правильный ответ: $correctAnswer")
+                telegramBotService.sendMessage(chatId, "\u274C Неправильно! Правильный ответ: $correctAnswer")
             }
-        } else telegramBotService.sendMessage(chatId, "Не найден текущий вопрос.")
+        } else telegramBotService.sendMessage(chatId, "❗ Не найден текущий вопрос")
         trainer.checkNextQuestionAndSend(chatId)
     }
 
@@ -129,4 +125,6 @@ fun handleUpdate(update: Update, telegramBotService: TelegramBotService, trainer
         trainer.resetProgress()
         telegramBotService.sendMessage(chatId, "Прогресс сброшен")
     }
+
+    if (data?.lowercase() == MAIN_MENU) telegramBotService.sendMainMenu(chatId)
 }
