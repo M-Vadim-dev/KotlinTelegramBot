@@ -1,7 +1,6 @@
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import org.example.Question
-import java.io.IOException
 import java.net.URI
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
@@ -22,8 +21,16 @@ class TelegramBotService(private val botToken: String, private val json: Json) {
     fun getUpdates(updateId: Long): String {
         val urlGetUpdates = "$TELEGRAM_API_URL/bot$botToken/getUpdates?offset=$updateId"
         val request: HttpRequest = HttpRequest.newBuilder().uri(URI.create(urlGetUpdates)).build()
-        val response: HttpResponse<String> = client.send(request, HttpResponse.BodyHandlers.ofString())
-        return response.body()
+        while (true) {
+            val result = runCatching { client.send(request, HttpResponse.BodyHandlers.ofString()) }
+            if (result.isSuccess) {
+                return result.getOrNull()?.body()
+                    ?: "{\"status\":\"error\",\"message\":\"Обновление отсутствует\"}"
+            } else {
+                println("Ошибка при получении обновлений: ${result.exceptionOrNull()?.message}")
+                Thread.sleep(5000)
+            }
+        }
     }
 
     fun sendMessage(chatId: Long, message: String): String {
@@ -33,17 +40,16 @@ class TelegramBotService(private val botToken: String, private val json: Json) {
             text = message,
         )
         val requestBodyString = json.encodeToString(requestBody)
-
         val request: HttpRequest = HttpRequest.newBuilder().uri(URI.create(urlSenMessage))
             .header("Content-type", "application/json")
             .POST(HttpRequest.BodyPublishers.ofString(requestBodyString))
             .build()
-        return try {
+        return runCatching {
             val response: HttpResponse<String> = client.send(request, HttpResponse.BodyHandlers.ofString())
             response.body()
-        } catch (e: IOException) {
+        }.getOrElse { e ->
             println("Ошибка при отправке сообщения: ${e.message}")
-            ""
+            "{\"status\":\"error\",\"message\":\"Ошибка при отправке сообщения\"}"
         }
     }
 
@@ -69,17 +75,16 @@ class TelegramBotService(private val botToken: String, private val json: Json) {
             )
         )
         val requestBodyString = json.encodeToString(requestBody)
-
         val request: HttpRequest = HttpRequest.newBuilder().uri(URI.create(urlSendMenu))
             .header("Content-type", "application/json")
             .POST(HttpRequest.BodyPublishers.ofString(requestBodyString))
             .build()
-        return try {
+        return runCatching {
             val response: HttpResponse<String> = client.send(request, HttpResponse.BodyHandlers.ofString())
             response.body()
-        } catch (e: IOException) {
+        }.getOrElse { e ->
             println("Ошибка при отправке меню: ${e.message}")
-            ""
+            "{\"status\":\"error\",\"message\":\"Ошибка при отправке меню\"}"
         }
     }
 
@@ -99,17 +104,16 @@ class TelegramBotService(private val botToken: String, private val json: Json) {
             )
         )
         val requestBodyString = json.encodeToString(requestBody)
-
         val request: HttpRequest = HttpRequest.newBuilder().uri(URI.create(urlSendMenu))
             .header("Content-type", "application/json")
             .POST(HttpRequest.BodyPublishers.ofString(requestBodyString))
             .build()
-        return try {
+        return runCatching {
             val response: HttpResponse<String> = client.send(request, HttpResponse.BodyHandlers.ofString())
             response.body()
-        } catch (e: IOException) {
-            println("Ошибка при отправке меню: ${e.message}")
-            ""
+        }.getOrElse { e ->
+            println("Ошибка при отправке главного меню: ${e.message}")
+            "{\"status\":\"error\",\"message\":\"Ошибка при отправке главного меню\"}"
         }
     }
 
@@ -129,18 +133,17 @@ class TelegramBotService(private val botToken: String, private val json: Json) {
         )
 
         val requestBodyString = json.encodeToString(requestBody)
-
         val request: HttpRequest = HttpRequest.newBuilder()
             .uri(URI.create(urlSendQuestion))
             .header("Content-type", "application/json")
             .POST(HttpRequest.BodyPublishers.ofString(requestBodyString))
             .build()
-        return try {
+        return runCatching {
             val response: HttpResponse<String> = client.send(request, HttpResponse.BodyHandlers.ofString())
             response.body()
-        } catch (e: IOException) {
+        }.getOrElse { e ->
             println("Ошибка при отправке вопроса: ${e.message}")
-            ""
+            "{\"status\":\"error\",\"message\":\"Ошибка при отправке вопроса\"}"
         }
     }
 }
